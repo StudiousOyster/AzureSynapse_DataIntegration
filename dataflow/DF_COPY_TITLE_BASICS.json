@@ -1,0 +1,29 @@
+{
+	"name": "DF_COPY_TITLE_BASICS",
+	"properties": {
+		"description": "Data Flow activities to flatten the IMDB files from bronze to silver in ADLS.",
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_ADLS_imdb",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [],
+			"transformations": [],
+			"scriptLines": [
+				"source(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     inferDriftedColumnTypes: true,",
+				"     limit: 10,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet',",
+				"     partitionBy('roundRobin', 10)) ~> source1"
+			]
+		}
+	}
+}
