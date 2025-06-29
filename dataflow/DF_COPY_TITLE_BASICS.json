@@ -71,7 +71,6 @@
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     inferDriftedColumnTypes: true,",
-				"     limit: 10,",
 				"     ignoreNoFilesFound: false,",
 				"     format: 'parquet',",
 				"     partitionBy('roundRobin', 10)) ~> TitleRatingsSrcBronze",

@@ -1,0 +1,48 @@
+{
+	"name": "PL_IMDB_Bronze_Silver",
+	"properties": {
+		"description": "Dataflow activity to flatten the imdb files from bronze e layer to silver layer",
+		"activities": [
+			{
+				"name": "DF",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "DF_COPY_TITLE_BASICS",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"TitleEpisodeSrcBronze": {
+								"FileName": "title.episode.parquet"
+							},
+							"TitleRatingsSrcBronze": {
+								"FileName": "title.ratings.parquet"
+							},
+							"titleEpisodeSinkSilver": {
+								"folderName": "episode_belongs_to"
+							},
+							"titleRatingsSinkSilver": {
+								"folderName": "title_ratings"
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine",
+					"runConcurrently": true
+				}
+			}
+		],
+		"annotations": []
+	}
+}
