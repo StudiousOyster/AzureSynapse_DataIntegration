@@ -7,13 +7,6 @@
 			"sources": [
 				{
 					"dataset": {
-						"referenceName": "DS_ADLS_imdb",
-						"type": "DatasetReference"
-					},
-					"name": "TitleBasicsSrcBronze"
-				},
-				{
-					"dataset": {
 						"referenceName": "DS_ADLS_bronze_imdb",
 						"type": "DatasetReference"
 					},
@@ -58,13 +51,6 @@
 				}
 			],
 			"scriptLines": [
-				"source(allowSchemaDrift: true,",
-				"     validateSchema: false,",
-				"     inferDriftedColumnTypes: true,",
-				"     limit: 10,",
-				"     ignoreNoFilesFound: false,",
-				"     format: 'parquet',",
-				"     partitionBy('roundRobin', 10)) ~> TitleBasicsSrcBronze",
 				"source(output(",
 				"          tconst as string,",
 				"          parentTconst as string,",
@@ -117,6 +103,7 @@
 				"Cast sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     format: 'parquet',",
+				"     filePattern:'episode_belongs_to-[n].parquet',",
 				"     umask: 0022,",
 				"     preCommands: [],",
 				"     postCommands: [],",
@@ -125,7 +112,7 @@
 				"CastRatings sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     format: 'parquet',",
-				"     filePattern:'',",
+				"     filePattern:'title_ratings-[n].parquet',",
 				"     umask: 0022,",
 				"     preCommands: [],",
 				"     postCommands: [],",
