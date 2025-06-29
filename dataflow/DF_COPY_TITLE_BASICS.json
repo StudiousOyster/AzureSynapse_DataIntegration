@@ -34,6 +34,13 @@
 						"type": "DatasetReference"
 					},
 					"name": "titleEpisodeSinkSilver"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_ADLS_Silver_imdb",
+						"type": "DatasetReference"
+					},
+					"name": "titleRatingsSinkSilver"
 				}
 			],
 			"transformations": [
@@ -42,6 +49,12 @@
 				},
 				{
 					"name": "Cast"
+				},
+				{
+					"name": "SelectRatings"
+				},
+				{
+					"name": "CastRatings"
 				}
 			],
 			"scriptLines": [
@@ -64,7 +77,12 @@
 				"     ignoreNoFilesFound: false,",
 				"     format: 'parquet',",
 				"     partitionBy('roundRobin', 10)) ~> TitleEpisodeSrcBronze",
-				"source(allowSchemaDrift: true,",
+				"source(output(",
+				"          tconst as string,",
+				"          averageRating as string,",
+				"          numVotes as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     inferDriftedColumnTypes: true,",
 				"     limit: 10,",
@@ -84,6 +102,18 @@
 				"          episode_number as integer",
 				"     ),",
 				"     errors: true) ~> Cast",
+				"TitleRatingsSrcBronze select(mapColumn(",
+				"          title_id = tconst,",
+				"          average_rating = averageRating,",
+				"          num_votes = numVotes",
+				"     ),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> SelectRatings",
+				"SelectRatings cast(output(",
+				"          average_rating as decimal(10,0),",
+				"          num_votes as integer",
+				"     ),",
+				"     errors: true) ~> CastRatings",
 				"Cast sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     format: 'parquet',",
@@ -91,7 +121,16 @@
 				"     preCommands: [],",
 				"     postCommands: [],",
 				"     skipDuplicateMapInputs: true,",
-				"     skipDuplicateMapOutputs: true) ~> titleEpisodeSinkSilver"
+				"     skipDuplicateMapOutputs: true) ~> titleEpisodeSinkSilver",
+				"CastRatings sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'parquet',",
+				"     filePattern:'',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> titleRatingsSinkSilver"
 			]
 		}
 	}
