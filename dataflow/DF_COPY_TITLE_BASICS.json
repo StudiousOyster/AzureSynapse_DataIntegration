@@ -10,11 +10,33 @@
 						"referenceName": "DS_ADLS_imdb",
 						"type": "DatasetReference"
 					},
-					"name": "source1"
+					"name": "TitleBasicsSrcBronze"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_ADLS_bronze_imdb",
+						"type": "DatasetReference"
+					},
+					"name": "TitleEpisodeSrcBronze"
 				}
 			],
-			"sinks": [],
-			"transformations": [],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DS_ADLS_Silver_imdb",
+						"type": "DatasetReference"
+					},
+					"name": "titleEpisodeSinkSilver"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select"
+				},
+				{
+					"name": "Cast"
+				}
+			],
 			"scriptLines": [
 				"source(allowSchemaDrift: true,",
 				"     validateSchema: false,",
@@ -22,7 +44,41 @@
 				"     limit: 10,",
 				"     ignoreNoFilesFound: false,",
 				"     format: 'parquet',",
-				"     partitionBy('roundRobin', 10)) ~> source1"
+				"     partitionBy('roundRobin', 10)) ~> TitleBasicsSrcBronze",
+				"source(output(",
+				"          tconst as string,",
+				"          parentTconst as string,",
+				"          seasonNumber as string,",
+				"          episodeNumber as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     inferDriftedColumnTypes: true,",
+				"     limit: 10,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet',",
+				"     partitionBy('roundRobin', 10)) ~> TitleEpisodeSrcBronze",
+				"TitleEpisodeSrcBronze select(mapColumn(",
+				"          title_id = tconst,",
+				"          parent_tv_show_title_id = parentTconst,",
+				"          season_number = seasonNumber,",
+				"          episode_number = episodeNumber",
+				"     ),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> Select",
+				"Select cast(output(",
+				"          season_number as integer,",
+				"          episode_number as integer",
+				"     ),",
+				"     errors: true) ~> Cast",
+				"Cast sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'parquet',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> titleEpisodeSinkSilver"
 			]
 		}
 	}
