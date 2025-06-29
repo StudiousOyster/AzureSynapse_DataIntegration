@@ -18,6 +18,13 @@
 						"type": "DatasetReference"
 					},
 					"name": "TitleEpisodeSrcBronze"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_ADLS_bronze_imdb",
+						"type": "DatasetReference"
+					},
+					"name": "TitleRatingsSrcBronze"
 				}
 			],
 			"sinks": [
@@ -54,10 +61,16 @@
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     inferDriftedColumnTypes: true,",
-				"     limit: 10,",
 				"     ignoreNoFilesFound: false,",
 				"     format: 'parquet',",
 				"     partitionBy('roundRobin', 10)) ~> TitleEpisodeSrcBronze",
+				"source(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     inferDriftedColumnTypes: true,",
+				"     limit: 10,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet',",
+				"     partitionBy('roundRobin', 10)) ~> TitleRatingsSrcBronze",
 				"TitleEpisodeSrcBronze select(mapColumn(",
 				"          title_id = tconst,",
 				"          parent_tv_show_title_id = parentTconst,",
