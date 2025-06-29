@@ -18,6 +18,13 @@
 						"type": "DatasetReference"
 					},
 					"name": "TitleRatingsSrcBronze"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_ADLS_bronze_imdb",
+						"type": "DatasetReference"
+					},
+					"name": "TitleBasicsSrcBronze"
 				}
 			],
 			"sinks": [
@@ -34,11 +41,18 @@
 						"type": "DatasetReference"
 					},
 					"name": "titleRatingsSinkSilver"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_ADLS_Silver_imdb",
+						"type": "DatasetReference"
+					},
+					"name": "SinkTitles"
 				}
 			],
 			"transformations": [
 				{
-					"name": "Select"
+					"name": "SelectEpisodes"
 				},
 				{
 					"name": "Cast"
@@ -48,6 +62,27 @@
 				},
 				{
 					"name": "CastRatings"
+				},
+				{
+					"name": "SelectTitle1"
+				},
+				{
+					"name": "CastTitles"
+				},
+				{
+					"name": "SelectGenres"
+				},
+				{
+					"name": "SelectTitles"
+				},
+				{
+					"name": "ArrayGenres"
+				},
+				{
+					"name": "FlattenGenres"
+				},
+				{
+					"name": "RankGenre"
 				}
 			],
 			"scriptLines": [
@@ -74,6 +109,23 @@
 				"     ignoreNoFilesFound: false,",
 				"     format: 'parquet',",
 				"     partitionBy('roundRobin', 10)) ~> TitleRatingsSrcBronze",
+				"source(output(",
+				"          tconst as string,",
+				"          titleType as string,",
+				"          primaryTitle as string,",
+				"          originalTitle as string,",
+				"          isAdult as string,",
+				"          startYear as string,",
+				"          endYear as string,",
+				"          runtimeMinutes as string,",
+				"          genres as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     limit: 10,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet',",
+				"     partitionBy('roundRobin', 10)) ~> TitleBasicsSrcBronze",
 				"TitleEpisodeSrcBronze select(mapColumn(",
 				"          title_id = tconst,",
 				"          parent_tv_show_title_id = parentTconst,",
@@ -81,8 +133,8 @@
 				"          episode_number = episodeNumber",
 				"     ),",
 				"     skipDuplicateMapInputs: false,",
-				"     skipDuplicateMapOutputs: false) ~> Select",
-				"Select cast(output(",
+				"     skipDuplicateMapOutputs: false) ~> SelectEpisodes",
+				"SelectEpisodes cast(output(",
 				"          season_number as integer,",
 				"          episode_number as integer",
 				"     ),",
@@ -99,6 +151,55 @@
 				"          num_votes as integer",
 				"     ),",
 				"     errors: true) ~> CastRatings",
+				"TitleBasicsSrcBronze select(mapColumn(",
+				"          title_id = tconst,",
+				"          title_type = titleType,",
+				"          primary_title = primaryTitle,",
+				"          original_title = originalTitle,",
+				"          is_adult = isAdult,",
+				"          start_year = startYear,",
+				"          end_year = endYear,",
+				"          runtime_minutes = runtimeMinutes,",
+				"          genres",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SelectTitle1",
+				"SelectTitles cast(output(",
+				"          is_adult as boolean,",
+				"          start_year as integer,",
+				"          end_year as integer,",
+				"          runtime_minutes as integer",
+				"     ),",
+				"     errors: true) ~> CastTitles",
+				"SelectTitle1 select(mapColumn(",
+				"          title_id,",
+				"          genres",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SelectGenres",
+				"SelectTitle1 select(mapColumn(",
+				"          title_id,",
+				"          title_type,",
+				"          primary_title,",
+				"          original_title,",
+				"          is_adult,",
+				"          start_year,",
+				"          end_year,",
+				"          runtime_minutes",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SelectTitles",
+				"SelectGenres derive(genres = split(genres, ',')) ~> ArrayGenres",
+				"ArrayGenres foldDown(unroll(genres),",
+				"     mapColumn(",
+				"          title_id,",
+				"          genre = genres",
+				"     ),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> FlattenGenres",
+				"FlattenGenres rank(asc(genre, true),",
+				"     output(genre as long),",
+				"     dense: true) ~> RankGenre",
 				"Cast sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     format: 'parquet',",
@@ -118,7 +219,17 @@
 				"     preCommands: [],",
 				"     postCommands: [],",
 				"     skipDuplicateMapInputs: true,",
-				"     skipDuplicateMapOutputs: true) ~> titleRatingsSinkSilver"
+				"     skipDuplicateMapOutputs: true) ~> titleRatingsSinkSilver",
+				"CastTitles sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'parquet',",
+				"     filePattern:'titles-[n].parquet',",
+				"     truncate: true,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SinkTitles"
 			]
 		}
 	}
