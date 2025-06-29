@@ -240,6 +240,7 @@
 				"     validateSchema: false,",
 				"     format: 'parquet',",
 				"     filePattern:'title_genres-[n].parquet',",
+				"     truncate: true,",
 				"     umask: 0022,",
 				"     preCommands: [],",
 				"     postCommands: [],",

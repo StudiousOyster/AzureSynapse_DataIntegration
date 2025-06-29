@@ -4,7 +4,8 @@
 		"description": "Dataflow activity to flatten the imdb files from bronze e layer to silver layer",
 		"activities": [
 			{
-				"name": "DF",
+				"name": "DF_copy_imdb_bronze_silver",
+				"description": "To copy data from bronze/imdb to silver/imdb/ respective subfolders.\n",
 				"type": "ExecuteDataFlow",
 				"dependsOn": [],
 				"policy": {
@@ -26,11 +27,20 @@
 							"TitleRatingsSrcBronze": {
 								"FileName": "title.ratings.parquet"
 							},
+							"TitleBasicsSrcBronze": {
+								"FileName": "title.basics.parquet"
+							},
 							"titleEpisodeSinkSilver": {
 								"folderName": "episode_belongs_to"
 							},
 							"titleRatingsSinkSilver": {
 								"folderName": "title_ratings"
+							},
+							"SinkTitles": {
+								"folderName": "titles"
+							},
+							"SinkGenres": {
+								"folderName": "title_genres"
 							}
 						}
 					},
