@@ -1,0 +1,49 @@
+{
+	"name": "PL_Master_IMDB_Bronze_Silver",
+	"properties": {
+		"activities": [
+			{
+				"name": "CP_IMDB_Blob_Bronze",
+				"description": "Copy from BLOB to ADLS IMDB Bronze layer",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_IMDB_Blob_BronzeADLS",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "CP_IMDB_Bronze_Silver",
+				"description": "Copy from IMDB Bronze layer to Silver layer",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "CP_IMDB_Blob_Bronze",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_IMDB_Bronze_Silver",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"annotations": []
+	}
+}
