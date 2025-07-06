@@ -245,7 +245,8 @@
 				"     preCommands: [],",
 				"     postCommands: [],",
 				"     skipDuplicateMapInputs: true,",
-				"     skipDuplicateMapOutputs: true) ~> SinkGenres"
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('roundRobin', 10)) ~> SinkGenres"
 			]
 		}
 	}
