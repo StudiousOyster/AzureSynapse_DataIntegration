@@ -22,7 +22,7 @@
 						"storeSettings": {
 							"type": "AzureBlobStorageReadSettings",
 							"recursive": false,
-							"wildcardFileName": "*.tsv.gz",
+							"wildcardFileName": "*.tsv",
 							"enablePartitionDiscovery": false
 						},
 						"formatSettings": {

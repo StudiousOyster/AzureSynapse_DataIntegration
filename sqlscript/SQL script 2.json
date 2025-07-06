@@ -2,7 +2,7 @@
 	"name": "SQL script 2",
 	"properties": {
 		"content": {
-			"query": "-- This is auto-generated code\nSELECT\n    episodes.filepath() as FileName,\n    SUBSTRING(\n        episodes.filepath(),\n        CHARINDEX('episode_belongs_to-', episodes.filepath()),\n        CHARINDEX('.', episodes.filepath())\n    ),\n    COUNT(*) as counts\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/silver/imdb/episode_belongs_to/*',\n        FORMAT = 'PARQUET'\n    ) AS episodes\ngroup by episodes.filepath()\nORDER BY SUBSTRING(\n        episodes.filepath(),\n        CHARINDEX('episode_belongs_to-', episodes.filepath()),\n        CHARINDEX('.', episodes.filepath())\n    )",
+			"query": "-- This is auto-generated code\nSELECT\n    episodes.filepath() as FileName,\n    SUBSTRING(\n        episodes.filepath(),\n        CHARINDEX('title_genres-', episodes.filepath()),\n        CHARINDEX('.', episodes.filepath())\n    ),\n    COUNT(*) as counts\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/silver/imdb/title_genres/*',\n        FORMAT = 'PARQUET'\n    ) AS episodes\ngroup by episodes.filepath()\nORDER BY SUBSTRING(\n        episodes.filepath(),\n        CHARINDEX('title_genres-', episodes.filepath()),\n        CHARINDEX('.', episodes.filepath())\n    )",
 			"metadata": {
 				"language": "sql"
 			},
