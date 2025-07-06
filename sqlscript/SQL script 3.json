@@ -2,7 +2,7 @@
 	"name": "SQL script 3",
 	"properties": {
 		"content": {
-			"query": "-- This is auto-generated code\nSELECT\n    TOP 10 *\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/silver/imdb/title_ratings/**',\n        FORMAT = 'PARQUET'\n    ) AS [result]\n",
+			"query": "-- This is auto-generated code\nSELECT\n    episodes.filepath() AS FilePath,\n    COUNT(*) as record_count\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/bronze/imdb/**',\n        FORMAT = 'PARQUET'\n    ) AS episodes\nGROUP BY episodes.filepath()\nORDER BY episodes.filepath()",
 			"metadata": {
 				"language": "sql"
 			},
