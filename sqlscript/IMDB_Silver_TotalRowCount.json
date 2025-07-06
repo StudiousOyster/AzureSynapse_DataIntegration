@@ -1,8 +1,8 @@
 {
-	"name": "SQL script 1",
+	"name": "IMDB_Silver_TotalRowCount",
 	"properties": {
 		"content": {
-			"query": "-- This is auto-generated code\nSELECT\n    count(*)\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/silver/youflix/youflix_device/',\n        FORMAT = 'DELTA'\n    ) AS [result]\n",
+			"query": "SELECT \n    SUBSTRING(\n        episodes.filepath(),\n        CHARINDEX('/silver/', episodes.filepath()) + LEN('/silver/'),\n        CHARINDEX('/', episodes.filepath(), CHARINDEX('/silver/', episodes.filepath()) + LEN('/silver/')) \n            - (CHARINDEX('/silver/', episodes.filepath()) + LEN('/silver/'))\n    ) AS folder_name,\n    COUNT(*) as counts\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/silver/imdb/**',\n        FORMAT = 'PARQUET'\n    ) AS episodes\ngroup by SUBSTRING(\n        episodes.filepath(),\n        CHARINDEX('/silver/', episodes.filepath()) + LEN('/silver/'),\n        CHARINDEX('/', episodes.filepath(), CHARINDEX('/silver/', episodes.filepath()) + LEN('/silver/')) \n            - (CHARINDEX('/silver/', episodes.filepath()) + LEN('/silver/'))\n    )\n",
 			"metadata": {
 				"language": "sql"
 			},
