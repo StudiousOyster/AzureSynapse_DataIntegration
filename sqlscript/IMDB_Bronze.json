@@ -1,0 +1,17 @@
+{
+	"name": "IMDB_Bronze",
+	"properties": {
+		"content": {
+			"query": "-- This is auto-generated code\nSELECT\n    episodes.filepath() AS FilePath,\n    COUNT(*) as record_count\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/bronze/imdb/**',\n        FORMAT = 'PARQUET'\n    ) AS episodes\nGROUP BY episodes.filepath()\nORDER BY episodes.filepath()",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "master",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

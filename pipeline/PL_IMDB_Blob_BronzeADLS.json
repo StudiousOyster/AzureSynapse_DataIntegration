@@ -1,5 +1,5 @@
 {
-	"name": "PL_imdb_blob_adls_bronze",
+	"name": "PL_IMDB_Blob_BronzeADLS",
 	"properties": {
 		"description": "Copy activity to copy the data (full load) from blob storage imdb to adls bronze layer > imdb folder",
 		"activities": [
@@ -22,7 +22,10 @@
 						"storeSettings": {
 							"type": "AzureBlobStorageReadSettings",
 							"recursive": false,
-							"wildcardFileName": "*.tsv.gz",
+							"wildcardFileName": {
+								"value": "*.tsv.gz",
+								"type": "Expression"
+							},
 							"enablePartitionDiscovery": false
 						},
 						"formatSettings": {
