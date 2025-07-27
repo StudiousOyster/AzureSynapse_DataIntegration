@@ -33,10 +33,10 @@
 			"value": "/subscriptions/e6e26758-6985-4b07-90d1-e2e77c905ead/resourceGroups/rg-di-mentoring-cm/providers/Microsoft.Storage/storageAccounts/stdimentoringdatalakecm"
 		},
 		"TRG_UC3_properties_PL_Databricks_TMDB_Bronze_to_Silver_parameters_trending_filename": {
-			"value": "@triggerBody().data.trending_filename"
+			"value": "@triggerBody().event.data.trending_filename"
 		},
 		"TRG_UC3_properties_PL_Databricks_TMDB_Bronze_to_Silver_parameters_genres_filename": {
-			"value": "@triggerBody().data.genres_filename"
+			"value": "@triggerBody().event.data.genres_filename"
 		},
 		"TRG_UC3_properties_typeProperties_scope": {
 			"value": "/subscriptions/e6e26758-6985-4b07-90d1-e2e77c905ead/resourceGroups/rg-di-mentoring-cm/providers/Microsoft.EventGrid/topics/evgt-di-mentoring-cm"

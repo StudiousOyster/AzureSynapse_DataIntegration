@@ -46,11 +46,11 @@
 		},
 		"TRG_UC3_properties_PL_Databricks_TMDB_Bronze_to_Silver_parameters_trending_filename": {
 			"type": "string",
-			"defaultValue": "@triggerBody().data.trending_filename"
+			"defaultValue": "@triggerBody().event.data.trending_filename"
 		},
 		"TRG_UC3_properties_PL_Databricks_TMDB_Bronze_to_Silver_parameters_genres_filename": {
 			"type": "string",
-			"defaultValue": "@triggerBody().data.genres_filename"
+			"defaultValue": "@triggerBody().event.data.genres_filename"
 		},
 		"TRG_UC3_properties_typeProperties_scope": {
 			"type": "string",
@@ -1650,7 +1650,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "97a83e74-5623-450e-8a28-c5dee05dae57"
+						"spark.autotune.trackingId": "325855c0-a459-49bf-92a2-4261693fd9df"
 					}
 				},
 				"metadata": {
