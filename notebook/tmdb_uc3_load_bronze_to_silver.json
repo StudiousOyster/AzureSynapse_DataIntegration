@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "1ac14e98-3f97-4de2-9c63-da3bf2289bd9"
+				"spark.autotune.trackingId": "7c319ff0-910b-4320-b6f8-87732a55d813"
 			}
 		},
 		"metadata": {
@@ -89,8 +89,16 @@
 					"# in_file_genres = \"\"\r\n",
 					"# in_file_trending = \"\"\r\n",
 					"\r\n",
-					"in_file_genres = \"bronze/tmdb/tmdb_genres_20250720.json\"\r\n",
-					"in_file_trending = \"bronze/tmdb/tmdb_trending_item_20250720.json\""
+					"# Define notebook parameters with default empty values\r\n",
+					"dbutils.widgets.text(\"genres_filename\", \"\")\r\n",
+					"dbutils.widgets.text(\"trending_filename\", \"\")\r\n",
+					"\r\n",
+					"# Fetch values passed from Synapse pipeline\r\n",
+					"in_file_genres = dbutils.widgets.get(\"genres_filename\")\r\n",
+					"in_file_trending = dbutils.widgets.get(\"trending_filename\")\r\n",
+					"\r\n",
+					"# in_file_genres = \"bronze/tmdb/tmdb_genres_20250720.json\"\r\n",
+					"# in_file_trending = \"bronze/tmdb/tmdb_trending_item_20250720.json\""
 				],
 				"execution_count": 34
 			},
