@@ -1,0 +1,275 @@
+{
+	"name": "tmdb_uc3_load_bronze_to_silver",
+	"properties": {
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "tmdbSpark",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "1ac14e98-3f97-4de2-9c63-da3bf2289bd9"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/e6e26758-6985-4b07-90d1-e2e77c905ead/resourceGroups/rg-di-mentoring-cm/providers/Microsoft.Synapse/workspaces/syn-di-mentoring-cm/bigDataPools/tmdbSpark",
+				"name": "tmdbSpark",
+				"type": "Spark",
+				"endpoint": "https://syn-di-mentoring-cm.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/tmdbSpark",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.4",
+				"nodeCount": 3,
+				"cores": 4,
+				"memory": 28,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.functions import udf, explode\r\n",
+					"from pyspark.sql.functions import collect_list\r\n",
+					"from pyspark.sql.functions import col, concat_ws"
+				],
+				"execution_count": 33
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"tags": [
+						"parameters"
+					]
+				},
+				"source": [
+					"#notebook parameters. Leave them empty\r\n",
+					"# in_file_genres = \"\"\r\n",
+					"# in_file_trending = \"\"\r\n",
+					"\r\n",
+					"in_file_genres = \"bronze/tmdb/tmdb_genres_20250720.json\"\r\n",
+					"in_file_trending = \"bronze/tmdb/tmdb_trending_item_20250720.json\""
+				],
+				"execution_count": 34
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#TODO: uncomment the row below and assign your data lake storage name to the variable\r\n",
+					"storage_account = \"stdimentoringdatalakecm\"\r\n",
+					"\r\n",
+					"container = \"data\"\r\n",
+					"\r\n",
+					"date_postfix = in_file_genres[in_file_genres.find('.json') - 8 : in_file_genres.find('.json')]\r\n",
+					"\r\n",
+					"file_genres = f\"abfss://{container}@{storage_account}.dfs.core.windows.net/{in_file_genres}\"\r\n",
+					"\r\n",
+					"#TODO: uncomment the row below and assign movies trending file path to the variable\r\n",
+					"file_trending = f\"abfss://{container}@{storage_account}.dfs.core.windows.net/{in_file_trending}\""
+				],
+				"execution_count": 35
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Load list of genres to a dataframe"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "python"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"#TODO: uncomment the row below and complete missing parts with your code to create spark dataframe from file_genres source using spark.read.load method\r\n",
+					"df_genres = spark.read.json(file_genres)\r\n",
+					"\r\n",
+					"#explode genres array\r\n",
+					"df_genres = df_genres\\\r\n",
+					"    .select(\r\n",
+					"        explode('genres').alias('genres')\r\n",
+					"    )\\\r\n",
+					"    .select(\r\n",
+					"        'genres.id',\r\n",
+					"        'genres.name'\r\n",
+					"    )"
+				],
+				"execution_count": 36
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Load list of trending movies to a dataframe"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "python"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"#TODO: uncomment the row below and complete missing parts with your code to create spark dataframe from file_trending source using spark.read.load method\r\n",
+					"df_movies = spark.read.json(file_trending)\r\n",
+					"\r\n",
+					"#explode \"results\" property array\r\n",
+					"df_movies = df_movies\\\r\n",
+					"    .select(\r\n",
+					"        explode('results').alias('movies')\r\n",
+					"    )\\\r\n",
+					"    .select(\r\n",
+					"        'movies.id', \r\n",
+					"        'movies.title', \r\n",
+					"        'movies.popularity', \r\n",
+					"        'movies.vote_average', \r\n",
+					"        'movies.genre_ids'\r\n",
+					"    )\r\n",
+					"\r\n",
+					"#explode \"genres_ids\" property array\r\n",
+					"df_movies = df_movies\\\r\n",
+					"    .select(\r\n",
+					"        df_movies.id.alias('movie_id'), \r\n",
+					"        'title', \r\n",
+					"        'popularity', \r\n",
+					"        'vote_average', \r\n",
+					"        explode('genre_ids').alias('genre_id')\r\n",
+					"    )"
+				],
+				"execution_count": 41
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"#joining movies with genres dictionary to get genre name\r\n",
+					"inner_join = df_movies.join(df_genres,\r\n",
+					"     (df_movies.genre_id == df_genres.id), how = 'inner').select(df_movies.movie_id, df_movies.title, df_movies.popularity, df_movies.vote_average, df_genres.name.alias('genre_name'))\r\n",
+					"\r\n",
+					"#collect movie genres to a list of strings\r\n",
+					"grouped_genres = inner_join.groupBy('movie_id', 'title', 'popularity', 'vote_average').agg(collect_list('genre_name').alias('genres'))\r\n",
+					"\r\n",
+					"#get concatenated string value from list of genres\r\n",
+					"result = grouped_genres.withColumn(\"genres\",\r\n",
+					"   concat_ws(\",\",col(\"genres\")))     "
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#write resulted dataframe to a parquet file in silver layer\r\n",
+					"write_path = f\"abfss://{container}@{storage_account}.dfs.core.windows.net/silver/tmdb/tmdb_trending_{date_postfix}\"\r\n",
+					"\r\n",
+					"#TODO: uncomment the row below and complete missing parts with your code to save \"result\" dataframe to data lake in parquet format using overwrite mode\r\n",
+					"result.write.mode(\"overwrite\").parquet(write_path)"
+				],
+				"execution_count": null
+			}
+		]
+	}
+}

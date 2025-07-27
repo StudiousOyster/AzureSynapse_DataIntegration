@@ -1,0 +1,60 @@
+{
+	"name": "PL_Databricks_TMDB_Bronze_to_Silver",
+	"properties": {
+		"description": "To load the data obtained from function app func-di-mentoring-cm with app name APItoJson (2 files - ratings and genres) an dload them to the Silver layer of ADLS.",
+		"activities": [
+			{
+				"name": "CP_Bronze_to_Silver",
+				"type": "SynapseNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebook": {
+						"referenceName": "tmdb_uc3_load_bronze_to_silver",
+						"type": "NotebookReference"
+					},
+					"parameters": {
+						"trending_filename": {
+							"value": {
+								"value": "@pipeline().parameters.trending_filename",
+								"type": "Expression"
+							}
+						},
+						"genres_filename": {
+							"value": {
+								"value": "@pipeline().parameters.genres_filename",
+								"type": "Expression"
+							}
+						}
+					},
+					"snapshot": true,
+					"sparkPool": {
+						"referenceName": "tmdbSpark",
+						"type": "BigDataPoolReference"
+					},
+					"executorSize": "Small",
+					"conf": {
+						"spark.dynamicAllocation.enabled": false
+					},
+					"driverSize": "Small"
+				}
+			}
+		],
+		"parameters": {
+			"trending_filename": {
+				"type": "string"
+			},
+			"genres_filename": {
+				"type": "string"
+			}
+		},
+		"annotations": []
+	}
+}
