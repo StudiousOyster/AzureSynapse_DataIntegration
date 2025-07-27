@@ -21,14 +21,14 @@
 						"type": "NotebookReference"
 					},
 					"parameters": {
-						"trending_filename": {
+						"in_file_trending": {
 							"value": {
 								"value": "@pipeline().parameters.trending_filename",
 								"type": "Expression"
 							},
 							"type": "string"
 						},
-						"genres_filename": {
+						"in_file_genres": {
 							"value": {
 								"value": "@pipeline().parameters.genres_filename",
 								"type": "Expression"

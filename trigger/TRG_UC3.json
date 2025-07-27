@@ -8,6 +8,10 @@
 				"pipelineReference": {
 					"referenceName": "PL_Databricks_TMDB_Bronze_to_Silver",
 					"type": "PipelineReference"
+				},
+				"parameters": {
+					"trending_filename": "@triggerBody().data.trending_filename",
+					"genres_filename": "@triggerBody().data.genres_filename"
 				}
 			}
 		],
