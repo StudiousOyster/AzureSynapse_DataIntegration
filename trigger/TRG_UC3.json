@@ -3,7 +3,14 @@
 	"properties": {
 		"annotations": [],
 		"runtimeState": "Started",
-		"pipelines": [],
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "PL_Databricks_TMDB_Bronze_to_Silver",
+					"type": "PipelineReference"
+				}
+			}
+		],
 		"type": "CustomEventsTrigger",
 		"typeProperties": {
 			"subjectEndsWith": "",
