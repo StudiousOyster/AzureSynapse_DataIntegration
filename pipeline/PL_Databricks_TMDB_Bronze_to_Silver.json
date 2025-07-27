@@ -25,13 +25,15 @@
 							"value": {
 								"value": "@pipeline().parameters.trending_filename",
 								"type": "Expression"
-							}
+							},
+							"type": "string"
 						},
 						"genres_filename": {
 							"value": {
 								"value": "@pipeline().parameters.genres_filename",
 								"type": "Expression"
-							}
+							},
+							"type": "string"
 						}
 					},
 					"snapshot": true,
