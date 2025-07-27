@@ -10,8 +10,8 @@
 					"type": "PipelineReference"
 				},
 				"parameters": {
-					"trending_filename": "@triggerBody().data.trending_filename",
-					"genres_filename": "@triggerBody().data.genres_filename"
+					"trending_filename": "@triggerBody().event.data.trending_filename",
+					"genres_filename": "@triggerBody().event.data.genres_filename"
 				}
 			}
 		],
