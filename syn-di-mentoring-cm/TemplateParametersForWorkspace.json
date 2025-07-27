@@ -1,0 +1,36 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"value": "syn-di-mentoring-cm"
+		},
+		"syn-di-mentoring-cm-WorkspaceDefaultSqlServer_connectionString": {
+			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:syn-di-mentoring-cm.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"LS_ADLS_properties_typeProperties_url": {
+			"value": "https://stdimentoringdatalakecm.dfs.core.windows.net/"
+		},
+		"LS_SqlServer_properties_typeProperties_connectionString_secretName": {
+			"value": "ConnString-MSSQLServer"
+		},
+		"LS_SqlServer_properties_typeProperties_userName": {
+			"value": "LAIDBACKOYSTER-\\chipp"
+		},
+		"LS_YouFlixWatermark_properties_typeProperties_sasUri_secretName": {
+			"value": "SAS-YouflixWatermark"
+		},
+		"LS_blob_imdb_properties_typeProperties_sasUri_secretName": {
+			"value": "Blob-imdb-SAS"
+		},
+		"LS_kv_di_mentoring_cm1_properties_typeProperties_baseUrl": {
+			"value": "https://kv-di-mentoring-cm1.vault.azure.net/"
+		},
+		"syn-di-mentoring-cm-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"value": "https://stdimentoringdatalakecm.dfs.core.windows.net"
+		},
+		"TRG_UC1_properties_typeProperties_scope": {
+			"value": "/subscriptions/e6e26758-6985-4b07-90d1-e2e77c905ead/resourceGroups/rg-di-mentoring-cm/providers/Microsoft.Storage/storageAccounts/stdimentoringdatalakecm"
+		}
+	}
+}

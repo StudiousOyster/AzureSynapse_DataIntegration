@@ -1,0 +1,1905 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "syn-di-mentoring-cm"
+		},
+		"syn-di-mentoring-cm-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'syn-di-mentoring-cm-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:syn-di-mentoring-cm.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"LS_ADLS_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://stdimentoringdatalakecm.dfs.core.windows.net/"
+		},
+		"LS_SqlServer_properties_typeProperties_connectionString_secretName": {
+			"type": "string",
+			"defaultValue": "ConnString-MSSQLServer"
+		},
+		"LS_SqlServer_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "LAIDBACKOYSTER-\\chipp"
+		},
+		"LS_YouFlixWatermark_properties_typeProperties_sasUri_secretName": {
+			"type": "string",
+			"defaultValue": "SAS-YouflixWatermark"
+		},
+		"LS_blob_imdb_properties_typeProperties_sasUri_secretName": {
+			"type": "string",
+			"defaultValue": "Blob-imdb-SAS"
+		},
+		"LS_kv_di_mentoring_cm1_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://kv-di-mentoring-cm1.vault.azure.net/"
+		},
+		"syn-di-mentoring-cm-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://stdimentoringdatalakecm.dfs.core.windows.net"
+		},
+		"TRG_UC1_properties_typeProperties_scope": {
+			"type": "string",
+			"defaultValue": "/subscriptions/e6e26758-6985-4b07-90d1-e2e77c905ead/resourceGroups/rg-di-mentoring-cm/providers/Microsoft.Storage/storageAccounts/stdimentoringdatalakecm"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/PL_DatabricksNotebook_Silver')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "To move the files from bronze layer to the respective delta tables in the silver layer",
+				"activities": [
+					{
+						"name": "bronze_silver_move",
+						"description": "To move the files from bronze layer to siler layer after minor transformations",
+						"type": "DatabricksNotebook",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebookPath": "/Workspace/My_Notebooks/uc1_load_bronze_to_silver"
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_Databricks",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-06-10T19:52:33Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/LS_Databricks')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/PL_Databricks_TMDB_Bronze_to_Silver')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "To load the data obtained from function app func-di-mentoring-cm with app name APItoJson (2 files - ratings and genres) an dload them to the Silver layer of ADLS.",
+				"activities": [
+					{
+						"name": "CP_Bronze_to_Silver",
+						"type": "SynapseNotebook",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": "tmdb_uc3_load_bronze_to_silver",
+								"type": "NotebookReference"
+							},
+							"parameters": {
+								"trending_filename": {
+									"value": {
+										"value": "@pipeline().parameters.trending_filename",
+										"type": "Expression"
+									},
+									"type": "string"
+								},
+								"genres_filename": {
+									"value": {
+										"value": "@pipeline().parameters.genres_filename",
+										"type": "Expression"
+									},
+									"type": "string"
+								}
+							},
+							"snapshot": true,
+							"sparkPool": {
+								"referenceName": "tmdbSpark",
+								"type": "BigDataPoolReference"
+							},
+							"executorSize": "Small",
+							"conf": {
+								"spark.dynamicAllocation.enabled": false
+							},
+							"driverSize": "Small"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"trending_filename": {
+						"type": "string"
+					},
+					"genres_filename": {
+						"type": "string"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/notebooks/tmdb_uc3_load_bronze_to_silver')]",
+				"[concat(variables('workspaceId'), '/bigDataPools/tmdbSpark')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/PL_IMDB_Blob_BronzeADLS')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Copy activity to copy the data (full load) from blob storage imdb to adls bronze layer > imdb folder",
+				"activities": [
+					{
+						"name": "CP_imdb_blob_bronze",
+						"description": "Copying data from blob > imdb to adls > bronze > imdb",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": false,
+									"wildcardFileName": {
+										"value": "*.tsv.gz",
+										"type": "Expression"
+									},
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "ParquetSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "ParquetWriteSettings"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "DS_blob_imdb",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "DS_ADLS_imdb",
+								"type": "DatasetReference",
+								"parameters": {
+									"folderName": "bronze"
+								}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-06-15T12:58:26Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/DS_blob_imdb')]",
+				"[concat(variables('workspaceId'), '/datasets/DS_ADLS_imdb')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/PL_IMDB_Bronze_Silver')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Dataflow activity to flatten the imdb files from bronze e layer to silver layer",
+				"activities": [
+					{
+						"name": "DF_copy_imdb_bronze_silver",
+						"description": "To copy data from bronze/imdb to silver/imdb/ respective subfolders.\n",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "DF_COPY_TITLE_BASICS",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"TitleEpisodeSrcBronze": {
+										"FileName": "title.episode.parquet"
+									},
+									"TitleRatingsSrcBronze": {
+										"FileName": "title.ratings.parquet"
+									},
+									"TitleBasicsSrcBronze": {
+										"FileName": "title.basics.parquet"
+									},
+									"titleEpisodeSinkSilver": {
+										"folderName": "episode_belongs_to"
+									},
+									"titleRatingsSinkSilver": {
+										"folderName": "title_ratings"
+									},
+									"SinkTitles": {
+										"folderName": "titles"
+									},
+									"SinkGenres": {
+										"folderName": "title_genres"
+									}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine",
+							"runConcurrently": true
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/dataflows/DF_COPY_TITLE_BASICS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/PL_Master_IMDB_Bronze_Silver')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "CP_IMDB_Blob_Bronze",
+						"description": "Copy from BLOB to ADLS IMDB Bronze layer",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "PL_IMDB_Blob_BronzeADLS",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "CP_IMDB_Bronze_Silver",
+						"description": "Copy from IMDB Bronze layer to Silver layer",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "CP_IMDB_Blob_Bronze",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "PL_IMDB_Bronze_Silver",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/pipelines/PL_IMDB_Blob_BronzeADLS')]",
+				"[concat(variables('workspaceId'), '/pipelines/PL_IMDB_Bronze_Silver')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/PL_SQLServer_BronzeADLS')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "To transfer files from MS SQL Server (on premises) to ADLS/bronze/youflix/ folder",
+				"activities": [
+					{
+						"name": "PL Start Time",
+						"description": "To store the pipeline start time to store as watermark value",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "PLstartTime",
+							"value": {
+								"value": "@formatDateTime(pipeline().TriggerTime, 'yyyy-MM-ddTHH:mm:ss.fffZ')",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "WatermarkTable Lookup",
+						"description": "To lookup the azure table YouflixWatermark",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "PL Start Time",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureTableSource",
+								"azureTableSourceIgnoreTableNotFound": false
+							},
+							"dataset": {
+								"referenceName": "DS_YouFlixWatermark_Table",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "Looping through Tables",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "WatermarkTable Lookup",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('WatermarkTable Lookup').output.value",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Copy SQL Tables to ADLS bronze",
+									"description": "To copy the files into adls -data/bronze/youflix/ into respective folders for each table",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"sqlReaderQuery": {
+												"value": "@concat('select * ',\n'from youflix.[',item().PartitionKey,']',\n' where ', item().watermark_column, ' >= ''', formatDateTime(item().watermark, 'yyyy-MM-dd HH:mm:ss.fff'), '''',\n' and ', item().watermark_column, ' < ''', variables('PLstartTime'),''''\n)",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"dataIntegrationUnits": 4,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "DS_YouflixTables",
+											"type": "DatasetReference",
+											"parameters": {
+												"tableName": {
+													"value": "@item().PartitionKey",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "DS_ADLS_bronze_Youflix",
+											"type": "DatasetReference",
+											"parameters": {
+												"folderName": {
+													"value": "youflix_@{item().PartitionKey}",
+													"type": "Expression"
+												},
+												"fileName": {
+													"value": "youflix_@{item().PartitionKey}_@{formatDateTime(utcNow(), 'yyyyMMddhhmmss')}.csv",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "Update YouFlixWatermark",
+									"description": "To update the watermark column in the YouFlix watermark table for the respective files/partitionkeys",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Copy SQL Tables to ADLS bronze",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureTableSource",
+											"additionalColumns": [
+												{
+													"name": "updated_watermark",
+													"value": {
+														"value": "@variables('PLstartTime')",
+														"type": "Expression"
+													}
+												}
+											],
+											"azureTableSourceQuery": {
+												"value": "@concat(\n    'PartitionKey eq ''',\n    item().PartitionKey,\n    ''''\n)",
+												"type": "Expression"
+											},
+											"azureTableSourceIgnoreTableNotFound": false
+										},
+										"sink": {
+											"type": "AzureTableSink",
+											"azureTableInsertType": "merge",
+											"azureTablePartitionKeyName": "PartitionKey",
+											"azureTableRowKeyName": "RowKey",
+											"writeBatchSize": 10000
+										},
+										"enableStaging": false,
+										"dataIntegrationUnits": 4,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "PartitionKey",
+														"type": "String"
+													},
+													"sink": {
+														"name": "PartitionKey",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "RowKey",
+														"type": "String"
+													},
+													"sink": {
+														"name": "RowKey",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "Timestamp",
+														"type": "DateTimeOffset"
+													},
+													"sink": {
+														"name": "Timestamp",
+														"type": "DateTimeOffset"
+													}
+												},
+												{
+													"source": {
+														"name": "updated_watermark",
+														"type": "String"
+													},
+													"sink": {
+														"name": "watermark",
+														"type": "DateTimeOffset"
+													}
+												},
+												{
+													"source": {
+														"name": "watermark_column",
+														"type": "String"
+													},
+													"sink": {
+														"name": "watermark_column",
+														"type": "String"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "DS_YouFlixWatermark_Table",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "DS_YouFlixWatermark_Table",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									]
+								}
+							]
+						}
+					},
+					{
+						"name": "Create Success file",
+						"description": "To create the Success.csv file in the main data/youflix/bronze folder",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Looping through Tables",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": "SELECT 'SUCCESS!!!'\nWHERE 1=1;",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "DS_YouflixTables",
+								"type": "DatasetReference",
+								"parameters": {
+									"tableName": "device"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "DS_ADLS_bronze_Youflix",
+								"type": "DatasetReference",
+								"parameters": {
+									"folderName": {
+										"value": "@{string('')}",
+										"type": "Expression"
+									},
+									"fileName": "Success.csv"
+								}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"PLstartTime": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-06-10T20:22:54Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/DS_YouFlixWatermark_Table')]",
+				"[concat(variables('workspaceId'), '/datasets/DS_YouflixTables')]",
+				"[concat(variables('workspaceId'), '/datasets/DS_ADLS_bronze_Youflix')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DS_ADLS_Silver_imdb')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_ADLS",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"folderName": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "silver/imdb/@{dataset().folderName}",
+							"type": "Expression"
+						},
+						"fileSystem": "data"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/LS_ADLS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DS_ADLS_bronze_Youflix')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Data set to the ADLS/bronze/youflix folder to write the different files",
+				"linkedServiceName": {
+					"referenceName": "LS_ADLS",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"folderName": {
+						"type": "string"
+					},
+					"fileName": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().fileName",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "bronze/youflix/@{dataset().folderName}",
+							"type": "Expression"
+						},
+						"fileSystem": "data"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/LS_ADLS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DS_ADLS_bronze_imdb')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_ADLS",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"FileName": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().FileName",
+							"type": "Expression"
+						},
+						"folderPath": "bronze/imdb",
+						"fileSystem": "data"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/LS_ADLS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DS_ADLS_imdb')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Dataset for ADLS > data > silver/bronze ? imdb",
+				"linkedServiceName": {
+					"referenceName": "LS_ADLS",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"folderName": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@{dataset().folderName}/imdb",
+							"type": "Expression"
+						},
+						"fileSystem": "data"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/LS_ADLS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DS_YouFlixWatermark_Table')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_YouFlixWatermark",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "YouFlixWatermark"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/LS_YouFlixWatermark')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DS_YouflixTables')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Data set pointing to the youflix schema tables in MS SQL Server - LAIDBACKOYSTER-\\MSSQLSERVERTRAIN",
+				"linkedServiceName": {
+					"referenceName": "LS_SqlServer",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"tableName": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "youflix",
+					"table": {
+						"value": "@dataset().tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/LS_SqlServer')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DS_blob_imdb')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "dataset to the files inside the imdb container in the blob - stdimentoringblobcm",
+				"linkedServiceName": {
+					"referenceName": "LS_blob_imdb",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"container": "imdb"
+					},
+					"columnDelimiter": "\t",
+					"compressionCodec": "gzip",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": ""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/LS_blob_imdb')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/LS_ADLS')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Linked service to ADLS",
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('LS_ADLS_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/LS_Databricks')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Linked service to databricks workspace",
+				"annotations": [],
+				"type": "AzureDatabricks",
+				"typeProperties": {
+					"domain": "https://adb-3926204050592378.18.azuredatabricks.net",
+					"authentication": "MSI",
+					"workspaceResourceId": "/subscriptions/e6e26758-6985-4b07-90d1-e2e77c905ead/resourceGroups/rg-di-mentoring-cm/providers/Microsoft.Databricks/workspaces/dbs-di-mentoring-cm",
+					"existingClusterId": "0609-123506-m5scujjx"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/LS_SqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Linked service to MS SQL Server - LAIDBACKOYSTER-\\MSSQLSERVERTRAIN",
+				"annotations": [],
+				"type": "SqlServer",
+				"typeProperties": {
+					"connectionString": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "LS_kv_di_mentoring_cm1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "[parameters('LS_SqlServer_properties_typeProperties_connectionString_secretName')]"
+					},
+					"userName": "[parameters('LS_SqlServer_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "LS_kv_di_mentoring_cm1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "SQLServer-Pwd"
+					}
+				},
+				"connectVia": {
+					"referenceName": "SelfHostedIR",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/SelfHostedIR')]",
+				"[concat(variables('workspaceId'), '/linkedServices/LS_kv_di_mentoring_cm1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/LS_YouFlixWatermark')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Linked service to azure table - YouFlixWatermark which stores the watermark values, the table names and watermark columns",
+				"annotations": [],
+				"type": "AzureTableStorage",
+				"typeProperties": {
+					"sasUri": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "LS_kv_di_mentoring_cm1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "[parameters('LS_YouFlixWatermark_properties_typeProperties_sasUri_secretName')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]",
+				"[concat(variables('workspaceId'), '/linkedServices/LS_kv_di_mentoring_cm1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/LS_blob_imdb')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Linked service to imdb folder in stdimentoringblobcm",
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"sasUri": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "LS_kv_di_mentoring_cm1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "[parameters('LS_blob_imdb_properties_typeProperties_sasUri_secretName')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]",
+				"[concat(variables('workspaceId'), '/linkedServices/LS_kv_di_mentoring_cm1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/LS_kv_di_mentoring_cm1')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Linked service to azure key vault - kv-di-mentoring-cm1",
+				"annotations": [],
+				"type": "AzureKeyVault",
+				"typeProperties": {
+					"baseUrl": "[parameters('LS_kv_di_mentoring_cm1_properties_typeProperties_baseUrl')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/syn-di-mentoring-cm-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('syn-di-mentoring-cm-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/syn-di-mentoring-cm-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('syn-di-mentoring-cm-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/TRG_UC1')]",
+			"type": "Microsoft.Synapse/workspaces/triggers",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Trigger to start the databricks notebook to move files from bronze layer to the silver layer",
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "PL_DatabricksNotebook_Silver",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "BlobEventsTrigger",
+				"typeProperties": {
+					"blobPathBeginsWith": "/data/blobs/bronze/youflix/success.csv",
+					"blobPathEndsWith": "success.csv",
+					"ignoreEmptyBlobs": true,
+					"scope": "[parameters('TRG_UC1_properties_typeProperties_scope')]",
+					"events": [
+						"Microsoft.Storage.BlobCreated"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/pipelines/PL_DatabricksNotebook_Silver')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SelfHostedIR')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "SelfHosted",
+				"description": "Azure mentoring course self hosted IR",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DF_COPY_TITLE_BASICS')]",
+			"type": "Microsoft.Synapse/workspaces/dataflows",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Data Flow activities to flatten the IMDB files from bronze to silver in ADLS.",
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "DS_ADLS_bronze_imdb",
+								"type": "DatasetReference"
+							},
+							"name": "TitleEpisodeSrcBronze"
+						},
+						{
+							"dataset": {
+								"referenceName": "DS_ADLS_bronze_imdb",
+								"type": "DatasetReference"
+							},
+							"name": "TitleRatingsSrcBronze"
+						},
+						{
+							"dataset": {
+								"referenceName": "DS_ADLS_bronze_imdb",
+								"type": "DatasetReference"
+							},
+							"name": "TitleBasicsSrcBronze"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "DS_ADLS_Silver_imdb",
+								"type": "DatasetReference"
+							},
+							"name": "titleEpisodeSinkSilver"
+						},
+						{
+							"dataset": {
+								"referenceName": "DS_ADLS_Silver_imdb",
+								"type": "DatasetReference"
+							},
+							"name": "titleRatingsSinkSilver"
+						},
+						{
+							"dataset": {
+								"referenceName": "DS_ADLS_Silver_imdb",
+								"type": "DatasetReference"
+							},
+							"name": "SinkTitles"
+						},
+						{
+							"dataset": {
+								"referenceName": "DS_ADLS_Silver_imdb",
+								"type": "DatasetReference"
+							},
+							"name": "SinkGenres"
+						}
+					],
+					"transformations": [
+						{
+							"name": "SelectEpisodes"
+						},
+						{
+							"name": "Cast"
+						},
+						{
+							"name": "SelectRatings"
+						},
+						{
+							"name": "CastRatings"
+						},
+						{
+							"name": "SelectTitle1"
+						},
+						{
+							"name": "CastTitles"
+						},
+						{
+							"name": "SelectGenres"
+						},
+						{
+							"name": "SelectTitles"
+						},
+						{
+							"name": "ArrayGenres"
+						},
+						{
+							"name": "FlattenGenres"
+						},
+						{
+							"name": "RankGenre"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          tconst as string,",
+						"          parentTconst as string,",
+						"          seasonNumber as string,",
+						"          episodeNumber as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     inferDriftedColumnTypes: true,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'parquet',",
+						"     partitionBy('roundRobin', 10)) ~> TitleEpisodeSrcBronze",
+						"source(output(",
+						"          tconst as string,",
+						"          averageRating as string,",
+						"          numVotes as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     inferDriftedColumnTypes: true,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'parquet',",
+						"     partitionBy('roundRobin', 10)) ~> TitleRatingsSrcBronze",
+						"source(output(",
+						"          tconst as string,",
+						"          titleType as string,",
+						"          primaryTitle as string,",
+						"          originalTitle as string,",
+						"          isAdult as string,",
+						"          startYear as string,",
+						"          endYear as string,",
+						"          runtimeMinutes as string,",
+						"          genres as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'parquet',",
+						"     partitionBy('roundRobin', 10)) ~> TitleBasicsSrcBronze",
+						"TitleEpisodeSrcBronze select(mapColumn(",
+						"          title_id = tconst,",
+						"          parent_tv_show_title_id = parentTconst,",
+						"          season_number = seasonNumber,",
+						"          episode_number = episodeNumber",
+						"     ),",
+						"     skipDuplicateMapInputs: false,",
+						"     skipDuplicateMapOutputs: false) ~> SelectEpisodes",
+						"SelectEpisodes cast(output(",
+						"          season_number as integer,",
+						"          episode_number as integer",
+						"     ),",
+						"     errors: true) ~> Cast",
+						"TitleRatingsSrcBronze select(mapColumn(",
+						"          title_id = tconst,",
+						"          average_rating = averageRating,",
+						"          num_votes = numVotes",
+						"     ),",
+						"     skipDuplicateMapInputs: false,",
+						"     skipDuplicateMapOutputs: false) ~> SelectRatings",
+						"SelectRatings cast(output(",
+						"          average_rating as decimal(10,0),",
+						"          num_votes as integer",
+						"     ),",
+						"     errors: true) ~> CastRatings",
+						"TitleBasicsSrcBronze select(mapColumn(",
+						"          title_id = tconst,",
+						"          title_type = titleType,",
+						"          primary_title = primaryTitle,",
+						"          original_title = originalTitle,",
+						"          is_adult = isAdult,",
+						"          start_year = startYear,",
+						"          end_year = endYear,",
+						"          runtime_minutes = runtimeMinutes,",
+						"          genres",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectTitle1",
+						"SelectTitles cast(output(",
+						"          is_adult as boolean,",
+						"          start_year as integer,",
+						"          end_year as integer,",
+						"          runtime_minutes as integer",
+						"     ),",
+						"     errors: true) ~> CastTitles",
+						"SelectTitle1 select(mapColumn(",
+						"          title_id,",
+						"          genres",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectGenres",
+						"SelectTitle1 select(mapColumn(",
+						"          title_id,",
+						"          title_type,",
+						"          primary_title,",
+						"          original_title,",
+						"          is_adult,",
+						"          start_year,",
+						"          end_year,",
+						"          runtime_minutes",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SelectTitles",
+						"SelectGenres derive(genres = split(genres, ',')) ~> ArrayGenres",
+						"ArrayGenres foldDown(unroll(genres),",
+						"     mapColumn(",
+						"          title_id,",
+						"          genre = genres",
+						"     ),",
+						"     skipDuplicateMapInputs: false,",
+						"     skipDuplicateMapOutputs: false) ~> FlattenGenres",
+						"FlattenGenres window(over(title_id),",
+						"     asc(genre, true),",
+						"     rank = rowNumber()) ~> RankGenre",
+						"Cast sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'parquet',",
+						"     filePattern:'episode_belongs_to-[n].parquet',",
+						"     truncate: true,",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> titleEpisodeSinkSilver",
+						"CastRatings sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'parquet',",
+						"     filePattern:'title_ratings-[n].parquet',",
+						"     truncate: true,",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> titleRatingsSinkSilver",
+						"CastTitles sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'parquet',",
+						"     filePattern:'titles-[n].parquet',",
+						"     truncate: true,",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> SinkTitles",
+						"RankGenre sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'parquet',",
+						"     filePattern:'title_genres-[n].parquet',",
+						"     truncate: true,",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('roundRobin', 10)) ~> SinkGenres"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/DS_ADLS_bronze_imdb')]",
+				"[concat(variables('workspaceId'), '/datasets/DS_ADLS_Silver_imdb')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/IMDB_Bronze')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- This is auto-generated code\nSELECT\n    episodes.filepath() AS FilePath,\n    COUNT(*) as record_count\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/bronze/imdb/**',\n        FORMAT = 'PARQUET'\n    ) AS episodes\nGROUP BY episodes.filepath()\nORDER BY episodes.filepath()",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/IMDB_Silver_SubFolder_FileWise_RowCount')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- This is auto-generated code\nSELECT\n    episodes.filepath() as FileName,\n    SUBSTRING(\n        episodes.filepath(),\n        CHARINDEX('title_genres-', episodes.filepath()),\n        CHARINDEX('.', episodes.filepath())\n    ),\n    COUNT(*) as counts\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/silver/imdb/title_genres/*',\n        FORMAT = 'PARQUET'\n    ) AS episodes\ngroup by episodes.filepath()\nORDER BY SUBSTRING(\n        episodes.filepath(),\n        CHARINDEX('title_genres-', episodes.filepath()),\n        CHARINDEX('.', episodes.filepath())\n    )",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/IMDB_Silver_SubFolder_RowCount')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- This is auto-generated code\nSELECT\n    COUNT(*)\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/silver/imdb/titles/**',\n        FORMAT = 'PARQUET'\n    ) AS [result]\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/IMDB_Silver_TotalRowCount')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "SELECT \n    SUBSTRING(\n        episodes.filepath(),\n        CHARINDEX('/silver/', episodes.filepath()) + LEN('/silver/'),\n        CHARINDEX('/', episodes.filepath(), CHARINDEX('/silver/', episodes.filepath()) + LEN('/silver/')) \n            - (CHARINDEX('/silver/', episodes.filepath()) + LEN('/silver/'))\n    ) AS folder_name,\n    COUNT(*) as counts\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/silver/imdb/**',\n        FORMAT = 'PARQUET'\n    ) AS episodes\ngroup by SUBSTRING(\n        episodes.filepath(),\n        CHARINDEX('/silver/', episodes.filepath()) + LEN('/silver/'),\n        CHARINDEX('/', episodes.filepath(), CHARINDEX('/silver/', episodes.filepath()) + LEN('/silver/')) \n            - (CHARINDEX('/silver/', episodes.filepath()) + LEN('/silver/'))\n    )\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 1')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- This is auto-generated code\nSELECT\n    COUNT(*)\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/silver/tmdb/tmdb_trending_20250720/**',\n        FORMAT = 'PARQUET'\n    ) AS [result]\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/tmdb_uc3_load_bronze_to_silver')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "tmdbSpark",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "7c319ff0-910b-4320-b6f8-87732a55d813"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/e6e26758-6985-4b07-90d1-e2e77c905ead/resourceGroups/rg-di-mentoring-cm/providers/Microsoft.Synapse/workspaces/syn-di-mentoring-cm/bigDataPools/tmdbSpark",
+						"name": "tmdbSpark",
+						"type": "Spark",
+						"endpoint": "https://syn-di-mentoring-cm.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/tmdbSpark",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.4",
+						"nodeCount": 3,
+						"cores": 4,
+						"memory": 28
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"from pyspark.sql.functions import udf, explode\r\n",
+							"from pyspark.sql.functions import collect_list\r\n",
+							"from pyspark.sql.functions import col, concat_ws"
+						],
+						"outputs": [],
+						"execution_count": 33
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"tags": [
+								"parameters"
+							]
+						},
+						"source": [
+							"#notebook parameters. Leave them empty\r\n",
+							"# in_file_genres = \"\"\r\n",
+							"# in_file_trending = \"\"\r\n",
+							"\r\n",
+							"# Define notebook parameters with default empty values\r\n",
+							"dbutils.widgets.text(\"genres_filename\", \"\")\r\n",
+							"dbutils.widgets.text(\"trending_filename\", \"\")\r\n",
+							"\r\n",
+							"# Fetch values passed from Synapse pipeline\r\n",
+							"in_file_genres = dbutils.widgets.get(\"genres_filename\")\r\n",
+							"in_file_trending = dbutils.widgets.get(\"trending_filename\")\r\n",
+							"\r\n",
+							"# in_file_genres = \"bronze/tmdb/tmdb_genres_20250720.json\"\r\n",
+							"# in_file_trending = \"bronze/tmdb/tmdb_trending_item_20250720.json\""
+						],
+						"outputs": [],
+						"execution_count": 34
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#TODO: uncomment the row below and assign your data lake storage name to the variable\r\n",
+							"storage_account = \"stdimentoringdatalakecm\"\r\n",
+							"\r\n",
+							"container = \"data\"\r\n",
+							"\r\n",
+							"date_postfix = in_file_genres[in_file_genres.find('.json') - 8 : in_file_genres.find('.json')]\r\n",
+							"\r\n",
+							"file_genres = f\"abfss://{container}@{storage_account}.dfs.core.windows.net/{in_file_genres}\"\r\n",
+							"\r\n",
+							"#TODO: uncomment the row below and assign movies trending file path to the variable\r\n",
+							"file_trending = f\"abfss://{container}@{storage_account}.dfs.core.windows.net/{in_file_trending}\""
+						],
+						"outputs": [],
+						"execution_count": 35
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Load list of genres to a dataframe"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "python"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%pyspark\r\n",
+							"#TODO: uncomment the row below and complete missing parts with your code to create spark dataframe from file_genres source using spark.read.load method\r\n",
+							"df_genres = spark.read.json(file_genres)\r\n",
+							"\r\n",
+							"#explode genres array\r\n",
+							"df_genres = df_genres\\\r\n",
+							"    .select(\r\n",
+							"        explode('genres').alias('genres')\r\n",
+							"    )\\\r\n",
+							"    .select(\r\n",
+							"        'genres.id',\r\n",
+							"        'genres.name'\r\n",
+							"    )"
+						],
+						"outputs": [],
+						"execution_count": 36
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Load list of trending movies to a dataframe"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"microsoft": {
+								"language": "python"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%pyspark\r\n",
+							"#TODO: uncomment the row below and complete missing parts with your code to create spark dataframe from file_trending source using spark.read.load method\r\n",
+							"df_movies = spark.read.json(file_trending)\r\n",
+							"\r\n",
+							"#explode \"results\" property array\r\n",
+							"df_movies = df_movies\\\r\n",
+							"    .select(\r\n",
+							"        explode('results').alias('movies')\r\n",
+							"    )\\\r\n",
+							"    .select(\r\n",
+							"        'movies.id', \r\n",
+							"        'movies.title', \r\n",
+							"        'movies.popularity', \r\n",
+							"        'movies.vote_average', \r\n",
+							"        'movies.genre_ids'\r\n",
+							"    )\r\n",
+							"\r\n",
+							"#explode \"genres_ids\" property array\r\n",
+							"df_movies = df_movies\\\r\n",
+							"    .select(\r\n",
+							"        df_movies.id.alias('movie_id'), \r\n",
+							"        'title', \r\n",
+							"        'popularity', \r\n",
+							"        'vote_average', \r\n",
+							"        explode('genre_ids').alias('genre_id')\r\n",
+							"    )"
+						],
+						"outputs": [],
+						"execution_count": 41
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"#joining movies with genres dictionary to get genre name\r\n",
+							"inner_join = df_movies.join(df_genres,\r\n",
+							"     (df_movies.genre_id == df_genres.id), how = 'inner').select(df_movies.movie_id, df_movies.title, df_movies.popularity, df_movies.vote_average, df_genres.name.alias('genre_name'))\r\n",
+							"\r\n",
+							"#collect movie genres to a list of strings\r\n",
+							"grouped_genres = inner_join.groupBy('movie_id', 'title', 'popularity', 'vote_average').agg(collect_list('genre_name').alias('genres'))\r\n",
+							"\r\n",
+							"#get concatenated string value from list of genres\r\n",
+							"result = grouped_genres.withColumn(\"genres\",\r\n",
+							"   concat_ws(\",\",col(\"genres\")))     "
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#write resulted dataframe to a parquet file in silver layer\r\n",
+							"write_path = f\"abfss://{container}@{storage_account}.dfs.core.windows.net/silver/tmdb/tmdb_trending_{date_postfix}\"\r\n",
+							"\r\n",
+							"#TODO: uncomment the row below and complete missing parts with your code to save \"result\" dataframe to data lake in parquet format using overwrite mode\r\n",
+							"result.write.mode(\"overwrite\").parquet(write_path)"
+						],
+						"outputs": [],
+						"execution_count": null
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/tmdbSpark')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 5
+				},
+				"autoScale": {
+					"enabled": false,
+					"maxNodeCount": 10,
+					"minNodeCount": 3
+				},
+				"nodeCount": 3,
+				"nodeSize": "Small",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.4",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "centralindia"
+		}
+	]
+}
