@@ -43,6 +43,10 @@
 		"TRG_UC1_properties_typeProperties_scope": {
 			"type": "string",
 			"defaultValue": "/subscriptions/e6e26758-6985-4b07-90d1-e2e77c905ead/resourceGroups/rg-di-mentoring-cm/providers/Microsoft.Storage/storageAccounts/stdimentoringdatalakecm"
+		},
+		"TRG_UC3_properties_typeProperties_scope": {
+			"type": "string",
+			"defaultValue": "/subscriptions/e6e26758-6985-4b07-90d1-e2e77c905ead/resourceGroups/rg-di-mentoring-cm/providers/Microsoft.EventGrid/topics/evgt-di-mentoring-cm"
 		}
 	},
 	"variables": {
@@ -1183,6 +1187,36 @@
 			},
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/pipelines/PL_DatabricksNotebook_Silver')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/TRG_UC3')]",
+			"type": "Microsoft.Synapse/workspaces/triggers",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "PL_Databricks_TMDB_Bronze_to_Silver",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "CustomEventsTrigger",
+				"typeProperties": {
+					"subjectEndsWith": "",
+					"subjectBeginsWith": "tmdb",
+					"scope": "[parameters('TRG_UC3_properties_typeProperties_scope')]",
+					"events": [
+						"copycompleted"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/pipelines/PL_Databricks_TMDB_Bronze_to_Silver')]"
 			]
 		},
 		{
