@@ -1,0 +1,17 @@
+{
+	"name": "quarantine_events",
+	"properties": {
+		"content": {
+			"query": "-- This is auto-generated code\nSELECT\n    COUNT(*)\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/quarantine/events/**',\n        FORMAT = 'PARQUET'\n    ) AS [result]\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "master",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
