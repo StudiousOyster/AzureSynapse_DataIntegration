@@ -2,7 +2,7 @@
 	"name": "silver_events",
 	"properties": {
 		"content": {
-			"query": "SELECT  \n    TRY_CAST(PARSENAME(REPLACE([file_path], '/', '.'), 3) AS INT) AS year,\n    TRY_CAST(PARSENAME(REPLACE([file_path], '/', '.'), 2) AS INT) AS month,\n    TRY_CAST(PARSENAME(REPLACE([file_path], '/', '.'), 1) AS INT) AS day,\n    COUNT(*) AS row_count\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/silver/events/year=*/month=*/day=*/*.parquet',\n        FORMAT = 'PARQUET'\n    ) WITH (\n        file_path VARCHAR(1024)  -- captures the full path of each file\n    ) AS [result]\nGROUP BY  \n    TRY_CAST(PARSENAME(REPLACE([file_path], '/', '.'), 3) AS INT),\n    TRY_CAST(PARSENAME(REPLACE([file_path], '/', '.'), 2) AS INT),\n    TRY_CAST(PARSENAME(REPLACE([file_path], '/', '.'), 1) AS INT)\nORDER BY  \n    year, month, day;",
+			"query": "WITH fileData AS(\n    SELECT  \n    result.filepath() AS file_path,\n    TRY_CAST(SUBSTRING(result.filepath(), CHARINDEX('year=', result.filepath()) + 5, 4) AS INT) AS year, -- position after 'year=' since year= length is 5 and length of year is 4\n    TRY_CAST(SUBSTRING(result.filepath(), CHARINDEX('month=', result.filepath()) + 6, 2) AS INT) AS month,\n    TRY_CAST(SUBSTRING(result.filepath(), CHARINDEX('day=', result.filepath()) + 4, 2) AS INT) AS day\nFROM\n    OPENROWSET(\n        BULK 'https://stdimentoringdatalakecm.dfs.core.windows.net/data/silver/events/year=*/month=*/day=*/*.parquet',\n        FORMAT = 'PARQUET'\n    ) AS [result]\n)\nSELECT\n    file_path,\n    year,\n    month,\n    day,\n    COUNT(*) AS row_count\nFROM fileData\nGROUP BY  \n    file_path,\n    year,\n    month, \n    day\n\n\n",
 			"metadata": {
 				"language": "sql"
 			},
