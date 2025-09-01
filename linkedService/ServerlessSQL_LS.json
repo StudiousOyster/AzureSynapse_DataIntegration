@@ -1,0 +1,21 @@
+{
+	"name": "ServerlessSQL_LS",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"connectionString": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "LS_kv_di_mentoring_cm1",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "SQLServerlessConnString"
+			}
+		},
+		"connectVia": {
+			"referenceName": "AutoResolveIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
