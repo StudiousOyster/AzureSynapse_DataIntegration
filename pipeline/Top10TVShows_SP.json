@@ -1,0 +1,28 @@
+{
+	"name": "Top10TVShows_SP",
+	"properties": {
+		"activities": [
+			{
+				"name": "usp_GenerateTop10ShowsDataset",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_GenerateTop10ShowsDataset]"
+				},
+				"linkedServiceName": {
+					"referenceName": "ServerlessSQL_LS",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"annotations": []
+	}
+}
