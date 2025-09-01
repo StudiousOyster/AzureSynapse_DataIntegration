@@ -2,7 +2,7 @@
 	"name": "Top10TVShowsTriggerSch",
 	"properties": {
 		"annotations": [],
-		"runtimeState": "Stopped",
+		"runtimeState": "Started",
 		"pipelines": [
 			{
 				"pipelineReference": {
@@ -16,7 +16,7 @@
 			"recurrence": {
 				"frequency": "Hour",
 				"interval": 1,
-				"startTime": "2025-09-01T20:39:00",
+				"startTime": "2025-09-01T20:40:00",
 				"endTime": "2025-09-02T15:07:00",
 				"timeZone": "India Standard Time"
 			}
