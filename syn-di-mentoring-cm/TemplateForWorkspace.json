@@ -1610,6 +1610,46 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/LDW - DB')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "CREATE DATABASE [LDW];\n\nUSE [LDW];\nGO\n\nCREATE MASTER KEY ENCRYPTION BY PASSWORD = 'June@202506#';\n\nCREATE DATABASE SCOPED CREDENTIAL [LDW_SAS_Creds]\nWITH IDENTITY = 'SHARED ACCESS SIGNATURE',\nSECRET = 'sp=racwdl&st=2025-09-01T09:50:49Z&se=2026-11-16T18:05:49Z&spr=https&sv=2024-11-04&sr=c&sig=uS6SlBST6YDTEjjPxC3xDDot2O%2BP9OO0ldDj%2BIvhJ08%3D';\n\n\nCREATE EXTERNAL DATA SOURCE [LDW_ExtDataSrc]\nWITH\n(\n    LOCATION = 'abfss://data@stdimentoringdatalakecm.dfs.core.windows.net/',\n    CREDENTIAL = LDW_SAS_Creds\n    -- TYPE = HADOOP\n);\n\n-- DROP DATABASE LDW;",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "LDW",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/LDW View Creation')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- CREATE VIEW [dbo].[vwEpisode]\n-- AS\n-- SELECT\n--     title_id AS TitleId,\n--     parent_tv_show_title_id AS ParentTitleId,\n--     season_number AS SeasonNum,\n--     episode_number AS EpisodeNum\n-- FROM OPENROWSET(\n--         BULK 'silver/imdb/episode_belongs_to/*.parquet',\n--         DATA_SOURCE = 'LDW_ExtDataSrc',\n--         FORMAT = 'PARQUET'\n--     ) AS rows;\n\n\n-- CREATE VIEW [dbo].[vwEvent]\n-- AS\n-- WITH cols AS (\n--     SELECT\n--     result.filepath(1) as filepath1,\n--     event_timestamp AS EventTimestamp,\n--     event_uid AS EventUID,\n--     event_id  AS EventId,\n--     event_type AS EventType,\n--     movie_id  AS TitleId,\n--     user_subscription_device_id AS UserSubDevId\n-- FROM OPENROWSET(\n--         BULK 'silver/events/**',\n--         DATA_SOURCE = 'LDW_ExtDataSrc',\n--         FORMAT = 'PARQUET'\n--     ) AS result\n-- )\n-- SELECT\n--     EventTimestamp,\n--     CAST(CONCAT_WS('-', \n--     left(REPLACE(filepath1, 'year=', ''), 4),\n--     SUBSTRING(filepath1, CHARINDEX('month=', filepath1) + 6, 2),\n--     SUBSTRING(filepath1, CHARINDEX('day=', filepath1) + 4, 2)) AS DATE) AS FilePathDate,\n--     EventUID,\n--     EventId,\n--     EventType,\n--     TitleId,\n--     UserSubDevId\n-- from cols\n\n\n-- CREATE VIEW [dbo].[vwMovie]\n-- AS\n-- SELECT\n--     title_id AS TitleId,\n--     title_type AS TitleType,\n--     primary_title AS PrimaryTitle,\n--     is_adult AS IsAdult,\n--     start_year AS StartYear,\n--     end_year AS EndYear,\n--     runtime_minutes as RuntimeMinutes\n-- FROM OPENROWSET(\n--         BULK 'silver/imdb/titles/*.parquet',\n--         DATA_SOURCE = 'LDW_ExtDataSrc',\n--         FORMAT = 'PARQUET'\n--     ) AS result\n\n\n-- CREATE VIEW [dbo].[vwUser]\n-- AS\n-- SELECT\n--     user_id AS UserId,\n--     user_name AS UserName,\n--     first_name AS FirstName,\n--     last_name AS LastName,\n--     user_date_of_birth AS BirthDate\n-- FROM OPENROWSET(\n--         BULK 'silver/youflix/youflix_user/*.parquet',\n--         DATA_SOURCE = 'LDW_ExtDataSrc',\n--         FORMAT = 'PARQUET'\n--     ) AS result",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "LDW",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/SQL script 1')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
@@ -2225,46 +2265,6 @@
 			},
 			"dependsOn": [],
 			"location": "centralindia"
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/LDW - DB')]",
-			"type": "Microsoft.Synapse/workspaces/sqlscripts",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"content": {
-					"query": "CREATE DATABASE [LDW];\n\nUSE [LDW];\nGO\n\nCREATE MASTER KEY ENCRYPTION BY PASSWORD = 'June@202506#';\n\nCREATE DATABASE SCOPED CREDENTIAL [LDW_SAS_Creds]\nWITH IDENTITY = 'SHARED ACCESS SIGNATURE',\nSECRET = 'sp=racwdl&st=2025-09-01T09:50:49Z&se=2026-11-16T18:05:49Z&spr=https&sv=2024-11-04&sr=c&sig=uS6SlBST6YDTEjjPxC3xDDot2O%2BP9OO0ldDj%2BIvhJ08%3D';\n\n\nCREATE EXTERNAL DATA SOURCE [LDW_ExtDataSrc]\nWITH\n(\n    LOCATION = 'abfss://data@stdimentoringdatalakecm.dfs.core.windows.net/',\n    CREDENTIAL = LDW_SAS_Creds\n    -- TYPE = HADOOP\n);\n\n-- DROP DATABASE LDW;",
-					"metadata": {
-						"language": "sql"
-					},
-					"currentConnection": {
-						"databaseName": "LDW",
-						"poolName": "Built-in"
-					},
-					"resultLimit": 5000
-				},
-				"type": "SqlQuery"
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/LDW View Creation')]",
-			"type": "Microsoft.Synapse/workspaces/sqlscripts",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"content": {
-					"query": "-- CREATE VIEW [dbo].[vwEpisode]\n-- AS\n-- SELECT\n--     title_id AS TitleId,\n--     parent_tv_show_title_id AS ParentTitleId,\n--     season_number AS SeasonNum,\n--     episode_number AS EpisodeNum\n-- FROM OPENROWSET(\n--         BULK 'silver/imdb/episode_belongs_to/*.parquet',\n--         DATA_SOURCE = 'LDW_ExtDataSrc',\n--         FORMAT = 'PARQUET'\n--     ) AS rows;\n\n\n-- CREATE VIEW [dbo].[vwEvent]\n-- AS\n-- WITH cols AS (\n--     SELECT\n--     result.filepath(1) as filepath1,\n--     event_timestamp AS EventTimestamp,\n--     event_uid AS EventUID,\n--     event_id  AS EventId,\n--     event_type AS EventType,\n--     movie_id  AS TitleId,\n--     user_subscription_device_id AS UserSubDevId\n-- FROM OPENROWSET(\n--         BULK 'silver/events/**',\n--         DATA_SOURCE = 'LDW_ExtDataSrc',\n--         FORMAT = 'PARQUET'\n--     ) AS result\n-- )\n-- SELECT\n--     EventTimestamp,\n--     CAST(CONCAT_WS('-', \n--     left(REPLACE(filepath1, 'year=', ''), 4),\n--     SUBSTRING(filepath1, CHARINDEX('month=', filepath1) + 6, 2),\n--     SUBSTRING(filepath1, CHARINDEX('day=', filepath1) + 4, 2)) AS DATE) AS FilePathDate,\n--     EventUID,\n--     EventId,\n--     EventType,\n--     TitleId,\n--     UserSubDevId\n-- from cols\n\n\n\n",
-					"metadata": {
-						"language": "sql"
-					},
-					"currentConnection": {
-						"databaseName": "LDW",
-						"poolName": "Built-in"
-					},
-					"resultLimit": 5000
-				},
-				"type": "SqlQuery"
-			},
-			"dependsOn": []
 		}
 	]
 }
