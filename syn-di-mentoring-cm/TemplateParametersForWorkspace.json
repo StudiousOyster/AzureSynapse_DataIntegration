@@ -40,6 +40,9 @@
 		},
 		"TRG_UC3_properties_typeProperties_scope": {
 			"value": "/subscriptions/e6e26758-6985-4b07-90d1-e2e77c905ead/resourceGroups/rg-di-mentoring-cm/providers/Microsoft.EventGrid/topics/evgt-di-mentoring-cm"
+		},
+		"ServerlessSQL_LS_properties_typeProperties_connectionString_secretName": {
+			"value": "SQLServerlessConnString"
 		}
 	}
 }

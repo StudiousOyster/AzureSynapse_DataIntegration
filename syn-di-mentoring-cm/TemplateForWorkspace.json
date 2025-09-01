@@ -55,6 +55,10 @@
 		"TRG_UC3_properties_typeProperties_scope": {
 			"type": "string",
 			"defaultValue": "/subscriptions/e6e26758-6985-4b07-90d1-e2e77c905ead/resourceGroups/rg-di-mentoring-cm/providers/Microsoft.EventGrid/topics/evgt-di-mentoring-cm"
+		},
+		"ServerlessSQL_LS_properties_typeProperties_connectionString_secretName": {
+			"type": "string",
+			"defaultValue": "SQLServerlessConnString"
 		}
 	},
 	"variables": {
@@ -2265,6 +2269,100 @@
 			},
 			"dependsOn": [],
 			"location": "centralindia"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/ServerlessSQL_LS')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "LS_kv_di_mentoring_cm1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "[parameters('ServerlessSQL_LS_properties_typeProperties_connectionString_secretName')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]",
+				"[concat(variables('workspaceId'), '/linkedServices/LS_kv_di_mentoring_cm1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Top10TVShows_SP')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "usp_GenerateTop10ShowsDataset",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[dbo].[usp_GenerateTop10ShowsDataset]"
+						},
+						"linkedServiceName": {
+							"referenceName": "ServerlessSQL_LS",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/ServerlessSQL_LS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Top10TVShowsTriggerSch')]",
+			"type": "Microsoft.Synapse/workspaces/triggers",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "Top10TVShows_SP",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Hour",
+						"interval": 1,
+						"startTime": "2025-09-01T20:47:00",
+						"endTime": "2025-09-02T15:07:00",
+						"timeZone": "India Standard Time"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/pipelines/Top10TVShows_SP')]"
+			]
 		}
 	]
 }
