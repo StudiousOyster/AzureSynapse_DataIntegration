@@ -1,5 +1,5 @@
 {
-	"name": "PL_Databricks_TMDB_Bronze_to_Silver",
+	"name": "PL_Ntbk_TMDB_Bronze_to_Silver",
 	"properties": {
 		"description": "To load the data obtained from function app func-di-mentoring-cm with app name APItoJson (2 files - ratings and genres) an dload them to the Silver layer of ADLS.",
 		"activities": [

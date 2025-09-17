@@ -6,7 +6,7 @@
 		"pipelines": [
 			{
 				"pipelineReference": {
-					"referenceName": "PL_Databricks_TMDB_Bronze_to_Silver",
+					"referenceName": "PL_Ntbk_TMDB_Bronze_to_Silver",
 					"type": "PipelineReference"
 				},
 				"parameters": {
