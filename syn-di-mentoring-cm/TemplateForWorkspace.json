@@ -36,6 +36,10 @@
 			"type": "string",
 			"defaultValue": "https://kv-di-mentoring-cm1.vault.azure.net/"
 		},
+		"ServerlessSQL_LS_properties_typeProperties_connectionString_secretName": {
+			"type": "string",
+			"defaultValue": "SQLServerlessConnString"
+		},
 		"syn-di-mentoring-cm-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://stdimentoringdatalakecm.dfs.core.windows.net"
@@ -44,21 +48,17 @@
 			"type": "string",
 			"defaultValue": "/subscriptions/e6e26758-6985-4b07-90d1-e2e77c905ead/resourceGroups/rg-di-mentoring-cm/providers/Microsoft.Storage/storageAccounts/stdimentoringdatalakecm"
 		},
-		"TRG_UC3_properties_PL_Databricks_TMDB_Bronze_to_Silver_parameters_trending_filename": {
+		"TRG_UC3_properties_PL_Ntbk_TMDB_Bronze_to_Silver_parameters_trending_filename": {
 			"type": "string",
 			"defaultValue": "@triggerBody().event.data.trending_filename"
 		},
-		"TRG_UC3_properties_PL_Databricks_TMDB_Bronze_to_Silver_parameters_genres_filename": {
+		"TRG_UC3_properties_PL_Ntbk_TMDB_Bronze_to_Silver_parameters_genres_filename": {
 			"type": "string",
 			"defaultValue": "@triggerBody().event.data.genres_filename"
 		},
 		"TRG_UC3_properties_typeProperties_scope": {
 			"type": "string",
 			"defaultValue": "/subscriptions/e6e26758-6985-4b07-90d1-e2e77c905ead/resourceGroups/rg-di-mentoring-cm/providers/Microsoft.EventGrid/topics/evgt-di-mentoring-cm"
-		},
-		"ServerlessSQL_LS_properties_typeProperties_connectionString_secretName": {
-			"type": "string",
-			"defaultValue": "SQLServerlessConnString"
 		}
 	},
 	"variables": {
@@ -102,77 +102,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/linkedServices/LS_Databricks')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/PL_Databricks_TMDB_Bronze_to_Silver')]",
-			"type": "Microsoft.Synapse/workspaces/pipelines",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"description": "To load the data obtained from function app func-di-mentoring-cm with app name APItoJson (2 files - ratings and genres) an dload them to the Silver layer of ADLS.",
-				"activities": [
-					{
-						"name": "CP_Bronze_to_Silver",
-						"type": "SynapseNotebook",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"notebook": {
-								"referenceName": "tmdb_uc3_load_bronze_to_silver",
-								"type": "NotebookReference"
-							},
-							"parameters": {
-								"in_file_trending": {
-									"value": {
-										"value": "@pipeline().parameters.trending_filename",
-										"type": "Expression"
-									},
-									"type": "string"
-								},
-								"in_file_genres": {
-									"value": {
-										"value": "@pipeline().parameters.genres_filename",
-										"type": "Expression"
-									},
-									"type": "string"
-								}
-							},
-							"snapshot": true,
-							"sparkPool": {
-								"referenceName": "tmdbSpark",
-								"type": "BigDataPoolReference"
-							},
-							"executorSize": "Small",
-							"conf": {
-								"spark.dynamicAllocation.enabled": false
-							},
-							"driverSize": "Small"
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"parameters": {
-					"trending_filename": {
-						"type": "string"
-					},
-					"genres_filename": {
-						"type": "string"
-					}
-				},
-				"annotations": []
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/notebooks/tmdb_uc3_load_bronze_to_silver')]",
-				"[concat(variables('workspaceId'), '/bigDataPools/tmdbSpark')]"
 			]
 		},
 		{
@@ -385,6 +314,77 @@
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/pipelines/PL_IMDB_Blob_BronzeADLS')]",
 				"[concat(variables('workspaceId'), '/pipelines/PL_IMDB_Bronze_Silver')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/PL_Ntbk_TMDB_Bronze_to_Silver')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "To load the data obtained from function app func-di-mentoring-cm with app name APItoJson (2 files - ratings and genres) an dload them to the Silver layer of ADLS.",
+				"activities": [
+					{
+						"name": "CP_Bronze_to_Silver",
+						"type": "SynapseNotebook",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": "tmdb_uc3_load_bronze_to_silver",
+								"type": "NotebookReference"
+							},
+							"parameters": {
+								"in_file_trending": {
+									"value": {
+										"value": "@pipeline().parameters.trending_filename",
+										"type": "Expression"
+									},
+									"type": "string"
+								},
+								"in_file_genres": {
+									"value": {
+										"value": "@pipeline().parameters.genres_filename",
+										"type": "Expression"
+									},
+									"type": "string"
+								}
+							},
+							"snapshot": true,
+							"sparkPool": {
+								"referenceName": "tmdbSpark",
+								"type": "BigDataPoolReference"
+							},
+							"executorSize": "Small",
+							"conf": {
+								"spark.dynamicAllocation.enabled": false
+							},
+							"driverSize": "Small"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"trending_filename": {
+						"type": "string"
+					},
+					"genres_filename": {
+						"type": "string"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/notebooks/tmdb_uc3_load_bronze_to_silver')]",
+				"[concat(variables('workspaceId'), '/bigDataPools/tmdbSpark')]"
 			]
 		},
 		{
@@ -750,6 +750,42 @@
 				"[concat(variables('workspaceId'), '/datasets/DS_YouFlixWatermark_Table')]",
 				"[concat(variables('workspaceId'), '/datasets/DS_YouflixTables')]",
 				"[concat(variables('workspaceId'), '/datasets/DS_ADLS_bronze_Youflix')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Top10TVShows_SP')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "usp_GenerateTop10ShowsDataset",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[dbo].[usp_GenerateTop10ShowsDataset]"
+						},
+						"linkedServiceName": {
+							"referenceName": "ServerlessSQL_LS",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/ServerlessSQL_LS')]"
 			]
 		},
 		{
@@ -1127,6 +1163,33 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/ServerlessSQL_LS')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "LS_kv_di_mentoring_cm1",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "[parameters('ServerlessSQL_LS_properties_typeProperties_connectionString_secretName')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]",
+				"[concat(variables('workspaceId'), '/linkedServices/LS_kv_di_mentoring_cm1')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/syn-di-mentoring-cm-WorkspaceDefaultSqlServer')]",
 			"type": "Microsoft.Synapse/workspaces/linkedServices",
 			"apiVersion": "2019-06-01-preview",
@@ -1211,12 +1274,12 @@
 				"pipelines": [
 					{
 						"pipelineReference": {
-							"referenceName": "PL_Databricks_TMDB_Bronze_to_Silver",
+							"referenceName": "PL_Ntbk_TMDB_Bronze_to_Silver",
 							"type": "PipelineReference"
 						},
 						"parameters": {
-							"trending_filename": "[parameters('TRG_UC3_properties_PL_Databricks_TMDB_Bronze_to_Silver_parameters_trending_filename')]",
-							"genres_filename": "[parameters('TRG_UC3_properties_PL_Databricks_TMDB_Bronze_to_Silver_parameters_genres_filename')]"
+							"trending_filename": "[parameters('TRG_UC3_properties_PL_Ntbk_TMDB_Bronze_to_Silver_parameters_trending_filename')]",
+							"genres_filename": "[parameters('TRG_UC3_properties_PL_Ntbk_TMDB_Bronze_to_Silver_parameters_genres_filename')]"
 						}
 					}
 				],
@@ -1231,7 +1294,38 @@
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('workspaceId'), '/pipelines/PL_Databricks_TMDB_Bronze_to_Silver')]"
+				"[concat(variables('workspaceId'), '/pipelines/PL_Ntbk_TMDB_Bronze_to_Silver')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Top10TVShowsTriggerSch')]",
+			"type": "Microsoft.Synapse/workspaces/triggers",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "Top10TVShows_SP",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2025-09-01T20:47:00",
+						"endTime": "2025-09-02T15:07:00",
+						"timeZone": "India Standard Time"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/pipelines/Top10TVShows_SP')]"
 			]
 		},
 		{
@@ -2269,100 +2363,6 @@
 			},
 			"dependsOn": [],
 			"location": "centralindia"
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/ServerlessSQL_LS')]",
-			"type": "Microsoft.Synapse/workspaces/linkedServices",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"annotations": [],
-				"type": "AzureSqlDatabase",
-				"typeProperties": {
-					"connectionString": {
-						"type": "AzureKeyVaultSecret",
-						"store": {
-							"referenceName": "LS_kv_di_mentoring_cm1",
-							"type": "LinkedServiceReference"
-						},
-						"secretName": "[parameters('ServerlessSQL_LS_properties_typeProperties_connectionString_secretName')]"
-					}
-				},
-				"connectVia": {
-					"referenceName": "AutoResolveIntegrationRuntime",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]",
-				"[concat(variables('workspaceId'), '/linkedServices/LS_kv_di_mentoring_cm1')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/Top10TVShows_SP')]",
-			"type": "Microsoft.Synapse/workspaces/pipelines",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"activities": [
-					{
-						"name": "usp_GenerateTop10ShowsDataset",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[dbo].[usp_GenerateTop10ShowsDataset]"
-						},
-						"linkedServiceName": {
-							"referenceName": "ServerlessSQL_LS",
-							"type": "LinkedServiceReference"
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"annotations": []
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/linkedServices/ServerlessSQL_LS')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/Top10TVShowsTriggerSch')]",
-			"type": "Microsoft.Synapse/workspaces/triggers",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"annotations": [],
-				"runtimeState": "Started",
-				"pipelines": [
-					{
-						"pipelineReference": {
-							"referenceName": "Top10TVShows_SP",
-							"type": "PipelineReference"
-						},
-						"parameters": {}
-					}
-				],
-				"type": "ScheduleTrigger",
-				"typeProperties": {
-					"recurrence": {
-						"frequency": "Hour",
-						"interval": 1,
-						"startTime": "2025-09-01T20:47:00",
-						"endTime": "2025-09-02T15:07:00",
-						"timeZone": "India Standard Time"
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/pipelines/Top10TVShows_SP')]"
-			]
 		}
 	]
 }
